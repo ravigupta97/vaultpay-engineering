@@ -17,32 +17,37 @@ The services share **no database**. They communicate through two channels:
 
 ## System Diagram
 
-```
-                    ┌──────────────────────────────────────────────────┐
-                    │                  CLIENT                           │
-                    │  (Browser / Mobile / API Client)                  │
-                    └────────────────────┬─────────────────────────────┘
-                                         │  HTTPS
-                               ┌─────────▼──────────┐
-                               │   Nginx / Gateway   │
-                               │  (reverse proxy)    │
-                               └────┬───────────┬────┘
-                                    │           │
-                  ┌─────────────────▼─┐     ┌───▼─────────────────┐
-                  │    AuthShield      │     │      VaultPay        │
-                  │    :8000           │     │      :8001           │
-                  │                   │     │                      │
-                  │  FastAPI + async  │     │  FastAPI + async     │
-                  │  SQLAlchemy 2.0   │     │  SQLAlchemy 2.0      │
-                  └────────┬──────────┘     └─────────┬────────────┘
-                           │                          │
-              ┌────────────▼───┐            ┌─────────▼────────────┐
-              │  PostgreSQL     │            │  PostgreSQL           │
-              │  (AuthShield DB)│            │  (VaultPay DB)       │
-              │  Redis DB 0     │            │  Redis DB 1          │
-              └────────────────┘            └──────────────────────┘
-                           │      JWT shared secret     │
-                           └────────────────────────────┘
+```mermaid
+graph TD
+    Client(["👤 Client<br/>(Browser / Mobile / API)"])
+
+    subgraph Gateway
+        Nginx["🔀 Nginx<br/>Reverse Proxy<br/>Rate Limiting · TLS"]
+    end
+
+    subgraph AS["AuthShield  :8000"]
+        AS_App["FastAPI · SQLAlchemy 2.0<br/>Login · JWT issuance · Roles"]
+        AS_DB[("PostgreSQL<br/>AuthShield DB")]
+        AS_Redis[("Redis DB 0<br/>Revoked tokens")]
+        AS_App --> AS_DB
+        AS_App --> AS_Redis
+    end
+
+    subgraph VP["VaultPay  :8001"]
+        VP_App["FastAPI · SQLAlchemy 2.0<br/>Wallets · Txns · KYC · Admin"]
+        VP_DB[("PostgreSQL<br/>VaultPay DB")]
+        VP_Redis[("Redis DB 1<br/>PIN locks · Rate limits<br/>Daily totals")]
+        VP_App --> VP_DB
+        VP_App --> VP_Redis
+    end
+
+    Client -->|HTTPS| Nginx
+    Nginx -->|":8000"| AS_App
+    Nginx -->|":8001"| VP_App
+
+    VP_App <-->|"HTTP · internal calls<br/>(deactivate user, promote role)"| AS_App
+
+    AS_App -. "JWT_SECRET_KEY (shared)" .-> VP_App
 ```
 
 ---
