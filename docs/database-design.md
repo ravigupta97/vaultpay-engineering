@@ -23,12 +23,12 @@ VaultPay's PostgreSQL schema consists of **8 tables**.
 erDiagram
     wallets {
         UUID id PK
-        VARCHAR wallet_id UK "VPY-XXXXXX"
-        UUID user_id UK "AuthShield user, no FK"
-        NUMERIC balance "DECIMAL(12,2)"
-        VARCHAR currency "ISO 4217"
-        VARCHAR status "active|frozen|closed"
-        VARCHAR pin_hash "bcrypt"
+        VARCHAR wallet_id UK
+        UUID user_id
+        NUMERIC balance
+        VARCHAR currency
+        VARCHAR status
+        VARCHAR pin_hash
         INT pin_attempts
         TIMESTAMP created_at
         TIMESTAMP updated_at
@@ -37,17 +37,17 @@ erDiagram
     transactions {
         UUID id PK
         UUID wallet_id FK
-        VARCHAR reference_id UK "VP-TXN-XXXXXX"
-        VARCHAR type "credit|debit"
-        NUMERIC amount "DECIMAL(12,2)"
+        VARCHAR reference_id UK
+        VARCHAR type
+        NUMERIC amount
         VARCHAR currency
-        VARCHAR category "top_up|p2p_send|p2p_receive|withdrawal|refund"
-        VARCHAR status "pending|completed|failed|reversed"
-        UUID related_wallet_id "nullable - receiver or sender"
+        VARCHAR category
+        VARCHAR status
+        UUID related_wallet_id
         TEXT description
         JSONB metadata
-        UUID initiated_by "user_id from JWT"
-        VARCHAR request_id "X-Request-ID for tracing"
+        UUID initiated_by
+        VARCHAR request_id
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
@@ -55,47 +55,47 @@ erDiagram
     transaction_limits {
         UUID id PK
         UUID wallet_id FK
-        VARCHAR action "send_money|top_up|withdrawal"
-        NUMERIC daily_limit "DECIMAL(12,2)"
-        NUMERIC per_transaction_limit "DECIMAL(12,2)"
-        NUMERIC monthly_limit "DECIMAL(12,2), nullable"
+        VARCHAR action
+        NUMERIC daily_limit
+        NUMERIC per_transaction_limit
+        NUMERIC monthly_limit
         TIMESTAMP created_at
         TIMESTAMP updated_at
     }
 
     kyc_submissions {
         UUID id PK
-        UUID wallet_id FK UK
-        VARCHAR doc_type "aadhar|pan|passport|voters_id"
-        TEXT doc_number_encrypted "AES-256 encrypted"
-        VARCHAR status "pending|verified|rejected"
-        TEXT rejection_reason "nullable"
-        UUID reviewed_by "admin user_id, nullable"
+        UUID wallet_id FK
+        VARCHAR doc_type
+        TEXT doc_number_encrypted
+        VARCHAR status
+        TEXT rejection_reason
+        UUID reviewed_by
         TIMESTAMP submitted_at
-        TIMESTAMP reviewed_at "nullable"
+        TIMESTAMP reviewed_at
     }
 
     disputes {
         UUID id PK
         UUID wallet_id FK
         UUID transaction_id FK
-        VARCHAR status "open|under_review|resolved|rejected"
+        VARCHAR status
         TEXT reason
-        TEXT resolution_notes "nullable"
-        UUID resolved_by "admin user_id, nullable"
+        TEXT resolution_notes
+        UUID resolved_by
         TIMESTAMP created_at
-        TIMESTAMP resolved_at "nullable"
+        TIMESTAMP resolved_at
     }
 
     audit_logs {
         UUID id PK
-        UUID actor_id "user who triggered the action"
+        UUID actor_id
         VARCHAR actor_role
-        VARCHAR action "FREEZE_WALLET|APPROVE_KYC|etc"
-        VARCHAR target_type "wallet|transaction|kyc|user"
+        VARCHAR action
+        VARCHAR target_type
         UUID target_id
-        JSONB before_state "nullable snapshot"
-        JSONB after_state "nullable snapshot"
+        JSONB before_state
+        JSONB after_state
         VARCHAR request_id
         VARCHAR ip_address
         TIMESTAMP created_at
@@ -103,18 +103,18 @@ erDiagram
 
     notifications {
         UUID id PK
-        UUID user_id "AuthShield user, no FK"
-        VARCHAR type "transaction|kyc|dispute|system"
+        UUID user_id
+        VARCHAR type
         VARCHAR title
         TEXT body
         BOOLEAN is_read
-        JSONB metadata "nullable"
+        JSONB metadata
         TIMESTAMP created_at
     }
 
     system_settings {
         UUID id PK
-        VARCHAR key UK "e.g. default_daily_send_limit"
+        VARCHAR key UK
         TEXT value
         TEXT description
         TIMESTAMP updated_at
