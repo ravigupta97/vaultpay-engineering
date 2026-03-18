@@ -1,0 +1,118 @@
+# ── VaultPay Docker Compose ──────────────────────────────────────
+# Orchestrates VaultPay + PostgreSQL + Redis
+#
+# WHY SEPARATE PORTS?
+#   postgres: 5433 on host to avoid conflict with any local PostgreSQL
+#   redis:    6380 on host to avoid conflict with any local Redis
+#
+# NOTE: AuthShield runs separately on port 8000.
+# AUTHSHIELD_BASE_URL uses host.docker.internal to reach it from inside Docker.
+#
+# Usage:
+#   docker-compose up -d           # Start all services (detached)
+#   docker-compose up --build      # Rebuild VaultPay image
+#   docker-compose down -v         # Stop and remove volumes
+#   docker-compose logs -f app     # Follow VaultPay logs
+
+services:
+  # ── VaultPay Application ─────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vaultpay-app
+    ports:
+      - "8001:8001"
+    environment:
+      # Application
+      APP_NAME: VaultPay
+      APP_ENV: development
+      DEBUG: "true"
+      PORT: "8001"
+
+      # Database — points to the postgres service below
+      DATABASE_URL: postgresql+asyncpg://vaultpay:vaultpay_secret@postgres:5432/vaultpay
+
+      # Redis — points to the redis service below (DB 1)
+      # AuthShield uses Redis DB 0; VaultPay uses DB 1 to avoid key collisions
+      REDIS_URL: redis://redis:6379/1
+
+      # JWT — MUST match your AuthShield's JWT_SECRET_KEY
+      # VaultPay validates JWTs locally (no round-trip to AuthShield)
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-this-to-match-authshield}
+      JWT_ALGORITHM: HS256
+
+      # AuthShield — use host.docker.internal if AuthShield runs on host
+      AUTHSHIELD_BASE_URL: ${AUTHSHIELD_BASE_URL:-http://host.docker.internal:8000}
+
+      # VaultPay secrets
+      SECRET_KEY: ${SECRET_KEY:-vaultpay-docker-dev-secret-key}
+      KYC_ENCRYPTION_KEY: ${KYC_ENCRYPTION_KEY:-0123456789abcdef0123456789abcdef}
+
+      # Super Admin
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@example.com}
+
+      # Currency
+      DEFAULT_CURRENCY: INR
+
+      # CORS
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    depends_on:
+      postgres:
+        condition: service_healthy   # Wait for pg_isready, not just container start
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - vaultpay-network
+
+  # ── PostgreSQL ───────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: vaultpay-postgres
+    environment:
+      POSTGRES_USER: vaultpay
+      POSTGRES_PASSWORD: vaultpay_secret
+      POSTGRES_DB: vaultpay
+    ports:
+      - "5433:5432"   # 5433 on host to avoid conflict with local PostgreSQL
+    volumes:
+      - vaultpay-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaultpay -d vaultpay"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vaultpay-network
+
+  # ── Redis ────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: vaultpay-redis
+    ports:
+      - "6380:6379"   # 6380 on host to avoid conflict with local Redis
+    volumes:
+      - vaultpay-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - vaultpay-network
+
+# ── Volumes ──────────────────────────────────────────────────────
+volumes:
+  vaultpay-pgdata:
+    name: vaultpay-pgdata
+  vaultpay-redis:
+    name: vaultpay-redis
+
+# ── Network ──────────────────────────────────────────────────────
+networks:
+  vaultpay-network:
+    name: vaultpay-network
+    driver: bridge
