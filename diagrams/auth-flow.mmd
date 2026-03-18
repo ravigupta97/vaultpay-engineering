@@ -1,0 +1,44 @@
+sequenceDiagram
+    actor User
+    participant Client
+    participant AS as AuthShield :8000
+    participant VP as VaultPay :8001
+    participant Redis as Redis DB 0
+    participant DB as PostgreSQL
+
+    %% ── Login ──────────────────────────────────────────
+    User->>Client: Enter credentials
+    Client->>AS: POST /auth/login<br/>{email, password}
+    AS->>DB: SELECT user WHERE email = ?
+    AS->>AS: bcrypt.verify(password, hash)
+
+    alt Invalid credentials
+        AS-->>Client: 401 InvalidCredentialsError
+    end
+
+    AS->>AS: jwt.encode(user_id, email, roles, exp)
+    AS-->>Client: 200 {access_token, token_type: "bearer"}
+
+    %% ── Authenticated request (fast-path) ───────────────
+    Client->>VP: GET /wallets/me<br/>Authorization: Bearer <token>
+    VP->>VP: RequestIDMiddleware → X-Request-ID
+    VP->>VP: jwt.decode(token, JWT_SECRET_KEY)
+    VP->>Redis: GET revoked:{jti}
+
+    alt Token revoked
+        Redis-->>VP: EXISTS = true
+        VP-->>Client: 401 TokenRevokedError
+    end
+
+    VP->>VP: Build UserContext(user_id, roles)
+    VP->>DB: SELECT wallet WHERE user_id = ?
+    VP-->>Client: 200 {wallet data}
+
+    %% ── Logout / Token revocation ───────────────────────
+    User->>Client: Logout
+    Client->>AS: POST /auth/logout<br/>Authorization: Bearer <token>
+    AS->>AS: Decode token → extract jti, exp
+    AS->>Redis: SET revoked:{jti} = 1  EX remaining_ttl
+    AS-->>Client: 200 {message: "Logged out"}
+
+    Note over VP,Redis: Next VP request with same token<br/>hits Redis → 401 TokenRevokedError

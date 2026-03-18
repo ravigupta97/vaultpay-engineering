@@ -1,0 +1,51 @@
+sequenceDiagram
+    actor User
+    participant VP as VaultPay API
+    participant Redis
+    participant DB as PostgreSQL
+
+    User->>VP: POST /transactions/send<br/>{to_wallet_id, amount, pin}
+
+    VP->>VP: Decode JWT → UserContext
+    VP->>Redis: Check PIN lockout key<br/>pin_lock:{wallet_id}
+
+    alt PIN locked
+        Redis-->>VP: locked = true
+        VP-->>User: 423 WalletPINLockoutError
+    end
+
+    VP->>DB: BEGIN TRANSACTION
+    VP->>DB: SELECT sender_wallet FOR UPDATE
+    VP->>DB: SELECT receiver_wallet FOR UPDATE
+
+    VP->>VP: Verify bcrypt(pin, stored_hash)
+
+    alt PIN wrong
+        VP->>DB: ROLLBACK
+        VP->>DB: INCREMENT pin_attempt_count
+        VP->>Redis: SET pin_lock if attempts >= 3
+        VP-->>User: 401 InvalidPINError
+    end
+
+    VP->>VP: Check sender.status = active, not frozen
+    VP->>VP: Check receiver.status = active, not closed
+    VP->>VP: Check sender.balance >= amount
+    VP->>VP: Check amount <= per_transaction_limit
+    VP->>Redis: Check daily total key<br/>daily_sent:{wallet_id}:{date}
+
+    alt Limit exceeded
+        VP->>DB: ROLLBACK
+        VP-->>User: 422 DailyLimitExceededError
+    end
+
+    VP->>DB: UPDATE sender balance -= amount
+    VP->>DB: UPDATE receiver balance += amount
+    VP->>DB: INSERT debit transaction (sender)
+    VP->>DB: INSERT credit transaction (receiver)
+    VP->>DB: INSERT audit_log entry
+    VP->>DB: COMMIT
+
+    VP->>Redis: INCRBYFLOAT daily_sent:{wallet_id}:{date} amount
+    VP->>DB: INSERT notifications (sender + receiver)
+
+    VP-->>User: 200 {transaction_id, new_balance}

@@ -1,0 +1,97 @@
+erDiagram
+    WALLETS {
+        uuid id PK
+        uuid user_id
+        decimal balance
+        varchar currency
+        varchar status
+        boolean pin_set
+        int pin_attempt_count
+        timestamptz created_at
+        timestamptz updated_at
+    }
+
+    TRANSACTIONS {
+        uuid id PK
+        uuid wallet_id FK
+        varchar type
+        decimal amount
+        decimal balance_after
+        varchar status
+        uuid reference_id
+        uuid counterpart_wallet_id
+        text description
+        jsonb metadata
+        timestamptz created_at
+    }
+
+    TRANSACTION_LIMITS {
+        uuid id PK
+        uuid wallet_id FK
+        decimal daily_limit
+        decimal per_transaction_limit
+        decimal monthly_limit
+        timestamptz updated_at
+    }
+
+    KYC_DOCUMENTS {
+        uuid id PK
+        uuid user_id
+        varchar document_type
+        text document_number_encrypted
+        varchar status
+        uuid reviewed_by
+        text rejection_reason
+        timestamptz submitted_at
+        timestamptz reviewed_at
+    }
+
+    DISPUTES {
+        uuid id PK
+        uuid transaction_id FK
+        uuid raised_by
+        varchar reason
+        varchar status
+        text resolution_notes
+        uuid resolved_by
+        timestamptz created_at
+        timestamptz resolved_at
+    }
+
+    NOTIFICATIONS {
+        uuid id PK
+        uuid user_id
+        varchar type
+        varchar channel
+        text subject
+        text body
+        boolean is_read
+        jsonb metadata
+        timestamptz created_at
+    }
+
+    TOP_UP_REQUESTS {
+        uuid id PK
+        uuid wallet_id FK
+        decimal amount
+        varchar status
+        varchar payment_reference
+        timestamptz created_at
+        timestamptz completed_at
+    }
+
+    AUDIT_LOGS {
+        uuid id PK
+        uuid user_id
+        uuid wallet_id
+        varchar action
+        jsonb details
+        varchar ip_address
+        uuid request_id
+        timestamptz created_at
+    }
+
+    WALLETS ||--o{ TRANSACTIONS : "has"
+    WALLETS ||--|| TRANSACTION_LIMITS : "has"
+    WALLETS ||--o{ TOP_UP_REQUESTS : "has"
+    TRANSACTIONS ||--o{ DISPUTES : "disputed via"
