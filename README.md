@@ -28,7 +28,7 @@ This is the **public engineering documentation** for VaultPay — a fintech micr
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         Client / Frontend                        │
+│                         Client / Frontend                       │
 └──────────────────────────┬──────────────────────────────────────┘
                            │
             ┌──────────────┴──────────────┐
@@ -42,13 +42,13 @@ This is the **public engineering documentation** for VaultPay — a fintech micr
     └───────┬────────┘           └────────┬─────────┘
             │                             │
     ┌───────▼────────┐           ┌────────▼─────────┐
-    │   Redis DB 0   │           │   Redis DB 1      │
-    │  (AuthShield)  │           │  (VaultPay)       │
+    │   Redis DB 0   │           │   Redis DB 1     │
+    │  (AuthShield)  │           │  (VaultPay)      │
     └───────┬────────┘           └──────────────────┘
             │                             │
     ┌───────▼────────┐           ┌────────▼─────────┐
-    │  AuthShield DB │           │  VaultPay DB      │
-    │  (PostgreSQL)  │           │  (PostgreSQL 16)  │
+    │  AuthShield DB │           │  VaultPay DB     │
+    │  (PostgreSQL)  │           │  (PostgreSQL 16) │
     └────────────────┘           └──────────────────┘
 ```
 
