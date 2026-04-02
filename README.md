@@ -135,16 +135,26 @@ vaultpay/
 
 ## Code Samples
 
-Annotated, production-ready code samples from the private repo:
+Annotated, production-ready code samples from the private repo. Every file includes inline comments explaining **why** each design decision was made.
+
+**Architecture & Infrastructure**
 
 | File | Pattern Demonstrated |
 |---|---|
-| [exception-hierarchy.py](code-samples/exception-hierarchy.py) | Centralized typed exception system |
-| [wallet-model.py](code-samples/wallet-model.py) | SQLAlchemy financial data modeling |
-| [auth-middleware.py](code-samples/auth-middleware.py) | Request ID propagation middleware |
-| [common-schemas.py](code-samples/common-schemas.py) | Generic API response envelope |
-| [docker-compose.yml](code-samples/docker-compose.yml) | Multi-service container orchestration |
-| [Dockerfile](code-samples/Dockerfile) | Multi-stage production build |
+| [exception-hierarchy.py](code-samples/exception-hierarchy.py) | Centralized typed exception system with HTTP status mapping |
+| [wallet-model.py](code-samples/wallet-model.py) | SQLAlchemy 2.0 financial data modeling (`Numeric` over `Float`, state machine) |
+| [auth-middleware.py](code-samples/auth-middleware.py) | Request ID propagation middleware for distributed tracing |
+| [common-schemas.py](code-samples/common-schemas.py) | Generic `StandardResponse[T]` API response envelope |
+| [docker-compose.yml](code-samples/docker-compose.yml) | Multi-service container orchestration with healthchecks |
+| [Dockerfile](code-samples/Dockerfile) | Multi-stage production build (builder → runtime, non-root user) |
+
+**Core Business Logic**
+
+| File | Pattern Demonstrated |
+|---|---|
+| [atomic-transfer.py](code-samples/atomic-transfer.py) | 6-step P2P transfer: PIN auth → dual-layer idempotency → atomic debit+credit → audit log |
+| [pin-lockout.py](code-samples/pin-lockout.py) | Brute-force PIN protection: Redis atomic INCR, dual-write durability, auto-freeze, email reset |
+| [ip-trust-flow.py](code-samples/ip-trust-flow.py) | IP trust detection: SHA-256 hashing, 30-min confirmation tokens, fail-open Redis strategy |
 
 ---
 
