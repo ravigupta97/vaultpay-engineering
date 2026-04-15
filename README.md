@@ -24,6 +24,13 @@ This is the **public engineering documentation** for VaultPay — a fintech micr
 
 ---
 
+## 🚀 Live Demo
+
+The VaultPay API is currently deployed and publicly accessible. You can explore the endpoints and interact with the service using the live Swagger documentation:
+**[https://vaultpay-uvf2.onrender.com/docs](https://vaultpay-uvf2.onrender.com/docs)**
+
+---
+
 ## System Overview
 
 ```

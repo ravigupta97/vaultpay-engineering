@@ -1,5 +1,7 @@
 # API Reference
 
+**🔴 Live Interactive Docs (Swagger):** [https://vaultpay-uvf2.onrender.com/docs](https://vaultpay-uvf2.onrender.com/docs)
+
 All endpoints return a `StandardResponse[T]` envelope:
 
 ```json
